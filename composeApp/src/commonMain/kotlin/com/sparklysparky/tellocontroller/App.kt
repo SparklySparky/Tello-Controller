@@ -7,9 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeviceThermostat
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,16 +18,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sparklysparky.tellocontroller.classes.CommandType
 import com.sparklysparky.tellocontroller.classes.MainViewModel
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
-@Preview
 fun App() {
     val viewModel = remember { MainViewModel() }
     val isConnected by viewModel.isConnected.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
+
+    LaunchedEffect(isConnected) {
+        if (isConnected) {
+            //viewModel.updateTelemetry()
+        }
+    }
 
     MaterialTheme(
         colorScheme = darkColorScheme(
@@ -58,37 +61,48 @@ fun App() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Header with connection status
+                // Connection Header
                 ConnectionHeader(
                     isConnected = isConnected,
-                    onConnectClick = { viewModel.connect()}
+                    onConnectClick = { viewModel.connect() }
                 )
 
-                // Telemetry Dashboard
-                TelemetryDashboard(telemetry)
+                // Main Content: Split Screen
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Left Side: Telemetry
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TelemetryDashboard(telemetry)
+                    }
 
-                // Flight Controls Section
-                FlightControlsSection(viewModel, isConnected)
-
-                // Movement Controls Section
-                MovementControlsSection(viewModel, isConnected)
-
-                // Rotation Controls Section
-                RotationControlsSection(viewModel, isConnected)
-
-                // Flip Controls Section
-                FlipControlsSection(viewModel, isConnected)
-
-                // Advanced Commands Section
-                AdvancedCommandsSection(viewModel, isConnected)
-
-                // Query Commands Section
-                QueryCommandsSection(viewModel, isConnected)
+                    // Right Side: Controls
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FlightControlsSection(viewModel, isConnected)
+                        MovementControlsSection(viewModel, isConnected)
+                        RotationControlsSection(viewModel, isConnected)
+                        FlipControlsSection(viewModel, isConnected)
+                        AdvancedCommandsSection(viewModel, isConnected)
+                    }
+                }
             }
         }
     }
@@ -101,25 +115,25 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = if (isConnected) Color(0xFF1B5E20) else Color(0xFF8B0000)
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(
                     "TELLO DRONE",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
                     "Controller v1.0",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.7f)
                 )
             }
@@ -137,17 +151,17 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
             } else {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(10.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF4CAF50))
                     )
                     Text(
                         "CONNECTED",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -159,116 +173,89 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
 
 @Composable
 fun TelemetryDashboard(telemetry: TelemetryData) {
-    Column(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Text(
-            "TELEMETRY",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        // Primary gauges
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            CircularGauge(
-                modifier = Modifier.weight(1f),
-                label = "BATTERY",
-                value = telemetry.battery,
-                maxValue = 100,
-                unit = "%",
-                color = when {
-                    telemetry.battery > 50 -> Color(0xFF4CAF50)
-                    telemetry.battery > 20 -> Color(0xFFFFA726)
-                    else -> Color(0xFFEF5350)
-                }
+            Text(
+                "TELEMETRY",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
 
-            CircularGauge(
-                modifier = Modifier.weight(1f),
-                label = "HEIGHT",
-                value = telemetry.height,
-                maxValue = 500,
-                unit = "cm",
-                color = Color(0xFF00D4FF)
-            )
-        }
+            // Battery & Height
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CompactGauge(
+                    modifier = Modifier.weight(1f),
+                    label = "BATTERY",
+                    value = telemetry.battery,
+                    maxValue = 100,
+                    unit = "%",
+                    color = when {
+                        telemetry.battery > 50 -> Color(0xFF4CAF50)
+                        telemetry.battery > 20 -> Color(0xFFFFA726)
+                        else -> Color(0xFFEF5350)
+                    }
+                )
 
-        // Secondary metrics
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            LinearMetric(
-                modifier = Modifier.weight(1f),
-                label = "TEMP",
-                value = "${telemetry.tempLow}°-${telemetry.tempHigh}°",
-                icon = Icons.Default.DeviceThermostat
-            )
+                CompactGauge(
+                    modifier = Modifier.weight(1f),
+                    label = "HEIGHT",
+                    value = telemetry.height,
+                    maxValue = 500,
+                    unit = "cm",
+                    color = Color(0xFF00D4FF)
+                )
+            }
 
-            LinearMetric(
-                modifier = Modifier.weight(1f),
-                label = "TIME",
-                value = formatFlightTime(telemetry.flightTime),
-                icon = Icons.Default.Timer
-            )
-        }
+            // Metrics Grid
+            CompactMetric("TEMP", "${telemetry.tempLow}°-${telemetry.tempHigh}°", Icons.Default.DeviceThermostat)
+            CompactMetric("TIME", telemetry.flightTime, Icons.Default.Timer)
+            CompactMetric("SPEED", "${telemetry.speed} cm/s", Icons.Default.Speed)
+            CompactMetric("WiFi", telemetry.wifi.ifEmpty { "N/A" }, Icons.Default.Wifi)
+            CompactMetric("SDK", telemetry.sdk.ifEmpty { "N/A" }, Icons.Default.Info)
+            CompactMetric("S/N", telemetry.serialNumber.ifEmpty { "N/A" }, Icons.Default.Fingerprint)
 
-        // Attitude indicators
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AttitudeIndicator(
-                modifier = Modifier.weight(1f),
-                label = "PITCH",
-                value = telemetry.pitch,
-                icon = "⬆"
-            )
-            AttitudeIndicator(
-                modifier = Modifier.weight(1f),
-                label = "ROLL",
-                value = telemetry.roll,
-                icon = "↻"
-            )
-            AttitudeIndicator(
-                modifier = Modifier.weight(1f),
-                label = "YAW",
-                value = telemetry.yaw,
-                icon = "⟳"
-            )
-        }
+            Divider(color = Color.White.copy(alpha = 0.1f))
 
-        // Speed vectors
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            VectorMetric(
-                modifier = Modifier.weight(1f),
-                label = "VX",
-                value = telemetry.vgx
-            )
-            VectorMetric(
-                modifier = Modifier.weight(1f),
-                label = "VY",
-                value = telemetry.vgy
-            )
-            VectorMetric(
-                modifier = Modifier.weight(1f),
-                label = "VZ",
-                value = telemetry.vgz
-            )
+            // Attitude
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                MiniMetric(Modifier.weight(1f), "PITCH", "${telemetry.pitch}°")
+                MiniMetric(Modifier.weight(1f), "ROLL", "${telemetry.roll}°")
+                MiniMetric(Modifier.weight(1f), "YAW", "${telemetry.yaw}°")
+            }
+
+            // Velocity
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                MiniMetric(Modifier.weight(1f), "VX", "${telemetry.vgx}")
+                MiniMetric(Modifier.weight(1f), "VY", "${telemetry.vgy}")
+                MiniMetric(Modifier.weight(1f), "VZ", "${telemetry.vgz}")
+            }
         }
     }
 }
 
 @Composable
-fun CircularGauge(
+fun CompactGauge(
     modifier: Modifier = Modifier,
     label: String,
     value: Int,
@@ -279,48 +266,47 @@ fun CircularGauge(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.background
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 label,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 10.sp
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            Box(
-                contentAlignment = Alignment.Center
-            ) {
+            Box(contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     progress = { (value.toFloat() / maxValue).coerceIn(0f, 1f) },
-                    modifier = Modifier.size(100.dp),
+                    modifier = Modifier.size(60.dp),
                     color = color,
-                    strokeWidth = 8.dp,
+                    strokeWidth = 5.dp,
                     trackColor = Color.White.copy(alpha = 0.1f)
                 )
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         "$value",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = color
+                        color = color,
+                        fontSize = 16.sp
                     )
                     Text(
                         unit,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 8.sp
                     )
                 }
             }
@@ -329,120 +315,68 @@ fun CircularGauge(
 }
 
 @Composable
-fun LinearMetric(
-    modifier: Modifier = Modifier,
-    label: String,
-    value: String,
-    icon: ImageVector
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(12.dp)
+fun CompactMetric(label: String, value: String, icon: ImageVector) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 icon,
                 contentDescription = label,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.6f)
-                )
-                Text(
-                    value,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun AttitudeIndicator(
-    modifier: Modifier = Modifier,
-    label: String,
-    value: Int,
-    icon: String
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                icon,
-                style = MaterialTheme.typography.headlineSmall
+                modifier = Modifier.size(16.dp)
             )
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.6f)
-            )
-            Text(
-                "${value}°",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 12.sp
             )
         }
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            fontSize = 13.sp
+        )
     }
 }
 
 @Composable
-fun VectorMetric(
-    modifier: Modifier = Modifier,
-    label: String,
-    value: Int
-) {
+fun MiniMetric(modifier: Modifier, label: String, value: String) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.background
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(6.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.6f)
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 9.sp
             )
             Text(
-                "$value",
-                style = MaterialTheme.typography.titleSmall,
+                value,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
-                color = if (value > 0) Color(0xFF4CAF50) else if (value < 0) Color(0xFFEF5350) else Color.White
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 11.sp
             )
         }
     }
@@ -450,431 +384,187 @@ fun VectorMetric(
 
 @Composable
 fun FlightControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CommandSection(title = "FLIGHT CONTROLS") {
+    CompactCommandSection("FLIGHT") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "TAKEOFF",
-                icon = "🚁",
-                color = Color(0xFF4CAF50),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.TAKEOFF) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "LAND",
-                icon = "🛬",
-                color = Color(0xFF2196F3),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.LAND) }
-            )
+            CompactButton(Modifier.weight(1f), "TAKEOFF", "🚁", Color(0xFF4CAF50), isConnected) {
+                viewModel.sendCommand(CommandType.TAKEOFF)
+            }
+            CompactButton(Modifier.weight(1f), "LAND", "🛬", Color(0xFF2196F3), isConnected) {
+                viewModel.sendCommand(CommandType.LAND)
+            }
         }
-
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "EMERGENCY",
-                icon = "⚠️",
-                color = Color(0xFFEF5350),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.EMERGENCY) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "STOP",
-                icon = "⏸",
-                color = Color(0xFFFFA726),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.STOP) }
-            )
+            CompactButton(Modifier.weight(1f), "STOP", "⏸", Color(0xFFFFA726), isConnected) {
+                viewModel.sendCommand(CommandType.STOP)
+            }
+            CompactButton(Modifier.weight(1f), "EMRG", "⚠️", Color(0xFFEF5350), isConnected) {
+                viewModel.sendCommand(CommandType.EMERGENCY)
+            }
         }
     }
 }
 
 @Composable
 fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CommandSection(title = "MOVEMENT") {
-        // Vertical controls
+    CompactCommandSection("MOVEMENT") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "UP",
-                icon = "⬆️",
-                color = Color(0xFF00BCD4),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.UP) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "DOWN",
-                icon = "⬇️",
-                color = Color(0xFF00BCD4),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.DOWN) }
-            )
+            CompactButton(Modifier.weight(1f), "UP", "⬆️", Color(0xFF00BCD4), isConnected) {
+                viewModel.sendCommand(CommandType.UP)
+            }
+            CompactButton(Modifier.weight(1f), "DOWN", "⬇️", Color(0xFF00BCD4), isConnected) {
+                viewModel.sendCommand(CommandType.DOWN)
+            }
         }
-
-        // Horizontal controls
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "LEFT",
-                icon = "⬅️",
-                color = Color(0xFF9C27B0),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.LEFT) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "RIGHT",
-                icon = "➡️",
-                color = Color(0xFF9C27B0),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.RIGHT) }
-            )
+            CompactButton(Modifier.weight(1f), "LEFT", "⬅️", Color(0xFF9C27B0), isConnected) {
+                viewModel.sendCommand(CommandType.LEFT)
+            }
+            CompactButton(Modifier.weight(1f), "RIGHT", "➡️", Color(0xFF9C27B0), isConnected) {
+                viewModel.sendCommand(CommandType.RIGHT)
+            }
         }
-
-        // Forward/Backward controls
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "FORWARD",
-                icon = "🔼",
-                color = Color(0xFFFF9800),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.FORWARD) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "BACKWARD",
-                icon = "🔽",
-                color = Color(0xFFFF9800),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.BACKWARD) }
-            )
+            CompactButton(Modifier.weight(1f), "FWD", "🔼", Color(0xFFFF9800), isConnected) {
+                viewModel.sendCommand(CommandType.FORWARD)
+            }
+            CompactButton(Modifier.weight(1f), "BACK", "🔽", Color(0xFFFF9800), isConnected) {
+                viewModel.sendCommand(CommandType.BACKWARD)
+            }
         }
     }
 }
 
 @Composable
 fun RotationControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CommandSection(title = "ROTATION") {
+    CompactCommandSection("ROTATION") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "CLOCKWISE",
-                icon = "↻",
-                color = Color(0xFFE91E63),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.ROTATE_CLOCKWISE) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "C-CLOCKWISE",
-                icon = "↺",
-                color = Color(0xFFE91E63),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.ROTATE_COUNTERCLOCKWISE) }
-            )
+            CompactButton(Modifier.weight(1f), "CW", "↻", Color(0xFFE91E63), isConnected) {
+                viewModel.sendCommand(CommandType.ROTATE_CLOCKWISE)
+            }
+            CompactButton(Modifier.weight(1f), "CCW", "↺", Color(0xFFE91E63), isConnected) {
+                viewModel.sendCommand(CommandType.ROTATE_COUNTERCLOCKWISE)
+            }
         }
     }
 }
 
 @Composable
 fun FlipControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CommandSection(title = "FLIPS") {
+    CompactCommandSection("FLIPS") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "FLIP F",
-                icon = "🔼",
-                color = Color(0xFF673AB7),
-                enabled = isConnected,
-                compact = true,
-                onClick = { viewModel.sendCommand(CommandType.FLIP_FORWARD) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "FLIP B",
-                icon = "🔽",
-                color = Color(0xFF673AB7),
-                enabled = isConnected,
-                compact = true,
-                onClick = { viewModel.sendCommand(CommandType.FLIP_BACKWARD) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "FLIP L",
-                icon = "⬅️",
-                color = Color(0xFF673AB7),
-                enabled = isConnected,
-                compact = true,
-                onClick = { viewModel.sendCommand(CommandType.FLIP_LEFT) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "FLIP R",
-                icon = "➡️",
-                color = Color(0xFF673AB7),
-                enabled = isConnected,
-                compact = true,
-                onClick = { viewModel.sendCommand(CommandType.FLIP_RIGHT) }
-            )
+            CompactButton(Modifier.weight(1f), "F", "🔼", Color(0xFF673AB7), isConnected) {
+                viewModel.sendCommand(CommandType.FLIP_FORWARD)
+            }
+            CompactButton(Modifier.weight(1f), "B", "🔽", Color(0xFF673AB7), isConnected) {
+                viewModel.sendCommand(CommandType.FLIP_BACKWARD)
+            }
+            CompactButton(Modifier.weight(1f), "L", "⬅️", Color(0xFF673AB7), isConnected) {
+                viewModel.sendCommand(CommandType.FLIP_LEFT)
+            }
+            CompactButton(Modifier.weight(1f), "R", "➡️", Color(0xFF673AB7), isConnected) {
+                viewModel.sendCommand(CommandType.FLIP_RIGHT)
+            }
         }
     }
 }
 
 @Composable
 fun AdvancedCommandsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CommandSection(title = "ADVANCED") {
+    CompactCommandSection("ADVANCED") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "STREAM ON",
-                icon = "📹",
-                color = Color(0xFF009688),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.STREAM_ON) }
-            )
-
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "STREAM OFF",
-                icon = "📷",
-                color = Color(0xFF009688),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.STREAM_OFF) }
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            CommandButton(
-                modifier = Modifier.weight(1f),
-                label = "SET SPEED",
-                icon = "⚡",
-                color = Color(0xFFFFEB3B),
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.SET_SPEED) }
-            )
+            CompactButton(Modifier.weight(1f), "STREAM", "📹", Color(0xFF009688), isConnected) {
+                viewModel.startVideoStream()
+            }
+            CompactButton(Modifier.weight(1f), "SPEED", "⚡", Color(0xFFFFEB3B), isConnected) {
+                viewModel.sendCommand(CommandType.SET_SPEED)
+            }
         }
     }
 }
 
 @Composable
-fun QueryCommandsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CommandSection(title = "QUERIES") {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "BATTERY",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_BATTERY) }
-            )
-
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "SPEED",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_SPEED) }
-            )
-
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "TIME",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_TIME) }
-            )
-
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "HEIGHT",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_HEIGHT) }
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "TEMP",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_TEMPERATURE) }
-            )
-
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "ACCEL",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_ACCELERATION) }
-            )
-
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "TOF",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_TOF) }
-            )
-
-            QueryButton(
-                modifier = Modifier.weight(1f),
-                label = "BARO",
-                enabled = isConnected,
-                onClick = { viewModel.sendCommand(CommandType.GET_BAROMETER) }
-            )
-        }
-    }
-}
-
-@Composable
-fun CommandSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
+fun CompactCommandSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            shape = RoundedCornerShape(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                content = content
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 12.sp
             )
+            content()
         }
     }
 }
 
 @Composable
-fun CommandButton(
-    modifier: Modifier = Modifier,
+fun CompactButton(
+    modifier: Modifier,
     label: String,
     icon: String,
     color: Color,
     enabled: Boolean,
-    compact: Boolean = false,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(if (compact) 60.dp else 80.dp),
+        modifier = modifier.height(50.dp),
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = color,
             disabledContainerColor = color.copy(alpha = 0.3f)
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(4.dp)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                icon,
-                style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall
-            )
-            if (!compact) {
-                Spacer(modifier = Modifier.height(4.dp))
-            }
+            Text(icon, fontSize = 16.sp)
             Text(
                 label,
-                style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold
             )
         }
     }
-}
-
-@Composable
-fun QueryButton(
-    modifier: Modifier = Modifier,
-    label: String,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(50.dp),
-        enabled = enabled,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.primary,
-            disabledContentColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            2.dp,
-            if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-// Helper functions
-fun formatFlightTime(seconds: Int): String {
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return String.format("%02d:%02d", minutes, secs)
 }
 
 // Telemetry data class
@@ -883,11 +573,15 @@ data class TelemetryData(
     val height: Int = 0,
     val tempLow: Int = 0,
     val tempHigh: Int = 0,
-    val flightTime: Int = 0,
+    val flightTime: String = "0",
     val pitch: Int = 0,
     val roll: Int = 0,
     val yaw: Int = 0,
     val vgx: Int = 0,
     val vgy: Int = 0,
-    val vgz: Int = 0
+    val vgz: Int = 0,
+    val speed: String = "",
+    val wifi: String = "",
+    val sdk: String = "",
+    val serialNumber: String = ""
 )
