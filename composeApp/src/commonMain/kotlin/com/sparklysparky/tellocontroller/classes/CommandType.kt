@@ -1,0 +1,32 @@
+package com.sparklysparky.tellocontroller.classes
+
+enum class CommandType {
+    CONNECT,
+    TAKEOFF,
+    LAND,
+    EMERGENCY,
+    STOP,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    FORWARD,
+    BACKWARD,
+    ROTATE_CLOCKWISE,
+    ROTATE_COUNTERCLOCKWISE,
+    FLIP_FORWARD,
+    FLIP_BACKWARD,
+    FLIP_LEFT,
+    FLIP_RIGHT,
+    STREAM_ON,
+    STREAM_OFF,
+    GET_BATTERY,
+    GET_SPEED,
+    SET_SPEED,
+    GET_TIME,
+    GET_HEIGHT,
+    GET_TEMPERATURE,
+    GET_ACCELERATION,
+    GET_TOF,
+    GET_BAROMETER
+}
