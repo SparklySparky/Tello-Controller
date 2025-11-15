@@ -28,12 +28,6 @@ fun App() {
     val isConnected by viewModel.isConnected.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
 
-    LaunchedEffect(isConnected) {
-        if (isConnected) {
-            //viewModel.updateTelemetry()
-        }
-    }
-
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Color(0xFF00D4FF),
@@ -222,12 +216,10 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             }
 
             // Metrics Grid
-            CompactMetric("TEMP", "${telemetry.tempLow}°-${telemetry.tempHigh}°", Icons.Default.DeviceThermostat)
-            CompactMetric("TIME", telemetry.flightTime, Icons.Default.Timer)
-            CompactMetric("SPEED", "${telemetry.speed} cm/s", Icons.Default.Speed)
-            CompactMetric("WiFi", telemetry.wifi.ifEmpty { "N/A" }, Icons.Default.Wifi)
-            CompactMetric("SDK", telemetry.sdk.ifEmpty { "N/A" }, Icons.Default.Info)
-            CompactMetric("S/N", telemetry.serialNumber.ifEmpty { "N/A" }, Icons.Default.Fingerprint)
+            CompactMetric("TEMP", "${telemetry.tempLow}°-${telemetry.tempHigh}°C", Icons.Default.DeviceThermostat)
+            CompactMetric("TIME", formatTime(telemetry.flightTime), Icons.Default.Timer)
+            CompactMetric("TOF", "${telemetry.tof} cm", Icons.Default.Straighten)
+            CompactMetric("BARO", String.format("%.2f cm", telemetry.baro), Icons.Default.Compress)
 
             Divider(color = Color.White.copy(alpha = 0.1f))
 
@@ -249,6 +241,16 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                 MiniMetric(Modifier.weight(1f), "VX", "${telemetry.vgx}")
                 MiniMetric(Modifier.weight(1f), "VY", "${telemetry.vgy}")
                 MiniMetric(Modifier.weight(1f), "VZ", "${telemetry.vgz}")
+            }
+
+            // Acceleration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                MiniMetric(Modifier.weight(1f), "AX", String.format("%.2f", telemetry.agx))
+                MiniMetric(Modifier.weight(1f), "AY", String.format("%.2f", telemetry.agy))
+                MiniMetric(Modifier.weight(1f), "AZ", String.format("%.2f", telemetry.agz))
             }
         }
     }
@@ -497,7 +499,7 @@ fun AdvancedCommandsSection(viewModel: MainViewModel, isConnected: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CompactButton(Modifier.weight(1f), "STREAM", "📹", Color(0xFF009688), isConnected) {
-                viewModel.startVideoStream()
+                viewModel.sendCommand(CommandType.STREAM_ON)
             }
             CompactButton(Modifier.weight(1f), "SPEED", "⚡", Color(0xFFFFEB3B), isConnected) {
                 viewModel.sendCommand(CommandType.SET_SPEED)
@@ -567,21 +569,29 @@ fun CompactButton(
     }
 }
 
+// Helper function
+fun formatTime(seconds: Int): String {
+    val mins = seconds / 60
+    val secs = seconds % 60
+    return String.format("%02d:%02d", mins, secs)
+}
+
 // Telemetry data class
 data class TelemetryData(
-    val battery: Int = 0,
-    val height: Int = 0,
-    val tempLow: Int = 0,
-    val tempHigh: Int = 0,
-    val flightTime: String = "0",
     val pitch: Int = 0,
     val roll: Int = 0,
     val yaw: Int = 0,
-    val vgx: Int = 0,
-    val vgy: Int = 0,
-    val vgz: Int = 0,
-    val speed: String = "",
-    val wifi: String = "",
-    val sdk: String = "",
-    val serialNumber: String = ""
+    val vgx: Int = 0,           // velocity X
+    val vgy: Int = 0,           // velocity Y
+    val vgz: Int = 0,           // velocity Z
+    val tempLow: Int = 0,       // lowest temp
+    val tempHigh: Int = 0,      // highest temp
+    val tof: Int = 0,           // time of flight distance
+    val height: Int = 0,        // h
+    val battery: Int = 0,       // bat
+    val baro: Float = 0f,       // barometer
+    val flightTime: Int = 0,    // motor time in seconds
+    val agx: Float = 0f,        // acceleration X
+    val agy: Float = 0f,        // acceleration Y
+    val agz: Float = 0f         // acceleration Z
 )

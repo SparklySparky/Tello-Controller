@@ -1,278 +1,242 @@
 package com.sparklysparky.tellocontroller.classes
 
 import com.sparklysparky.tellocontroller.TelemetryData
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
 
-const val DEFAULT_TELLO_IP = "192.168.10.1"
-const val DEFAULT_TELLO_PORT = 8889
-const val LOCAL_PORT = 9000    // local port to bind and receive replies
-const val VIDEO_PORT = 11111    // local port to bind and receive replies
-const val RECEIVE_TIMEOUT_MS = 3000
+private const val DEFAULT_TELLO_IP = "192.168.10.1"
+private const val DEFAULT_TELLO_PORT = 8889        // Command port
+private const val LOCAL_COMMAND_PORT = 9000         // Local port for commands
+private const val TELEMETRY_PORT = 8890             // Tello state port
+private const val VIDEO_PORT = 11111                // Video stream port
+private const val RECEIVE_TIMEOUT_MS = 3000
 
 interface Client {
     suspend fun connect(): Boolean
     suspend fun send(message: CommandType)
-    suspend fun getTelemetryData(oldTelemetryData: TelemetryData): TelemetryData
-    suspend fun getVideoFrame(): ByteArray
+    fun startTelemetryListener(onUpdate: (TelemetryData) -> Unit)
+    fun stopTelemetryListener()
     suspend fun close()
 }
 
-class UDPClient(): Client {
-    private var udpSocket: DatagramSocket? = null
+class UDPClient : Client {
+    private var commandSocket: DatagramSocket? = null
+    private var telemetrySocket: DatagramSocket? = null
+    private val telloAddress by lazy { InetAddress.getByName(DEFAULT_TELLO_IP) }
 
-    var wifiAlreadyAsked = false
-    var sdkAlreadyAsked = false
-    var serialAlreadyAsked = false
+    private var telemetryJob: Job? = null
+    private var isTelemetryListening = false
+
+    // Command mapping
+    private val commandMap = mapOf(
+        CommandType.TAKEOFF to "takeoff",
+        CommandType.LAND to "land",
+        CommandType.EMERGENCY to "emergency",
+        CommandType.UP to "up 20",
+        CommandType.DOWN to "down 20",
+        CommandType.LEFT to "left 20",
+        CommandType.RIGHT to "right 20",
+        CommandType.FORWARD to "forward 20",
+        CommandType.BACKWARD to "back 20",
+        CommandType.ROTATE_CLOCKWISE to "cw 90",
+        CommandType.ROTATE_COUNTERCLOCKWISE to "ccw 90",
+        CommandType.FLIP_FORWARD to "flip f",
+        CommandType.FLIP_BACKWARD to "flip b",
+        CommandType.FLIP_LEFT to "flip l",
+        CommandType.FLIP_RIGHT to "flip r",
+        CommandType.GET_BATTERY to "battery?",
+        CommandType.GET_SPEED to "speed?",
+        CommandType.SET_SPEED to "speed 50",
+        CommandType.GET_TIME to "time?",
+        CommandType.GET_HEIGHT to "height?",
+        CommandType.GET_TEMPERATURE to "temp?",
+        CommandType.GET_ACCELERATION to "acceleration?",
+        CommandType.GET_TOF to "tof?",
+        CommandType.GET_BAROMETER to "baro?",
+        CommandType.CONNECT to "command",
+        CommandType.STOP to "stop",
+        CommandType.STREAM_ON to "streamon",
+        CommandType.STREAM_OFF to "streamoff"
+    )
 
     override suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
         try {
-            // close any existing socket (defensive)
-            udpSocket?.close()
+            closeCommandSocket()
 
-            udpSocket = DatagramSocket(LOCAL_PORT).apply {
+            // Create command socket
+            commandSocket = DatagramSocket(LOCAL_COMMAND_PORT).apply {
                 reuseAddress = true
                 soTimeout = RECEIVE_TIMEOUT_MS
             }
 
-            logMsg("Socket bound to local port $LOCAL_PORT")
+            logMsg("✓ Command socket bound to port $LOCAL_COMMAND_PORT")
 
-            // send "command" to enter SDK mode
-            val cmd = "command"
-            val sendBuf = cmd.toByteArray(Charsets.UTF_8)
-            val sendPacket = DatagramPacket(sendBuf, sendBuf.size, InetAddress.getByName(DEFAULT_TELLO_IP), DEFAULT_TELLO_PORT)
-            udpSocket?.send(sendPacket)
-            logMsg("Sent: $cmd")
+            // Send SDK mode command
+            sendRaw("command")
 
-            val resp = receiveOnce(true)
-            logMsg("Connect receive: ${resp ?: "<timeout/no response>"}")
+            val response = receiveCommandResponse()
+            val connected = response?.contains("ok", ignoreCase = true) == true
 
-            // Accept if contains "ok" (some packets may be state data; sometimes ok appears later)
-            if (resp != null && resp.contains("ok", ignoreCase = true)) {
-                logMsg("✓ Connected (ok received)")
-                true
+            if (connected) {
+                logMsg("✓ Connected to Tello")
             } else {
-                logMsg("✗ No 'ok' received")
-                false
+                logMsg("✗ Connection failed: ${response ?: "timeout"}")
+                closeCommandSocket()
             }
+
+            connected
         } catch (e: Exception) {
-            logMsg("Connection failed: ${e.message}")
-            e.printStackTrace()
+            logMsg("✗ Connection error: ${e.message}")
+            closeCommandSocket()
             false
         }
     }
 
-    override suspend fun getVideoFrame(): ByteArray = withContext(Dispatchers.IO) {
-        try {
-            val actualCommand = "streamon"
-
-            udpSocket = DatagramSocket(LOCAL_PORT).apply {
-                reuseAddress = true
-                soTimeout = RECEIVE_TIMEOUT_MS
-            }
-
-            logMsg("Socket bound to local port $LOCAL_PORT")
-
-            try {
-                val buffer = actualCommand.toByteArray(Charsets.UTF_8)
-                val packet = DatagramPacket(buffer, buffer.size, InetAddress.getByName(DEFAULT_TELLO_IP), DEFAULT_TELLO_PORT)
-                udpSocket?.send(packet)
-                logMsg("→ Sent: $actualCommand")
-            } catch (e: Exception) {
-                logMsg("Failed to send '$actualCommand': ${e.message}")
-            }
-
-            val resp = receiveOnce(false)
-            logMsg("Connect receive: ${resp ?: "<timeout/no response>"}")
-
-            // Accept if contains "ok" (some packets may be state data; sometimes ok appears later)
-            resp?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
-        } catch (e: Exception) {
-            logMsg("Connection failed: ${e.message}")
-            e.printStackTrace()
-            ByteArray(0)
-        }
-    }
-
     override suspend fun send(message: CommandType) = withContext(Dispatchers.IO) {
-        val actualCommand = when(message) {
-            CommandType.TAKEOFF -> "takeoff"
-            CommandType.LAND -> "land"
-            CommandType.EMERGENCY -> "emergency"
-            CommandType.UP -> "up 20"
-            CommandType.DOWN -> "down 20"
-            CommandType.LEFT -> "left 20"
-            CommandType.RIGHT -> "right 20"
-            CommandType.FORWARD -> "forward 20"
-            CommandType.BACKWARD -> "back 20"
-            CommandType.ROTATE_CLOCKWISE -> "cw 90"
-            CommandType.ROTATE_COUNTERCLOCKWISE -> "ccw 90"
-            CommandType.FLIP_FORWARD -> "flip f"
-            CommandType.FLIP_BACKWARD -> "flip b"
-            CommandType.FLIP_LEFT -> "flip l"
-            CommandType.FLIP_RIGHT -> "flip r"
-            CommandType.GET_BATTERY -> "battery?"
-            CommandType.GET_SPEED -> "speed?"
-            CommandType.SET_SPEED -> "speed 50"
-            CommandType.GET_TIME -> "time?"
-            CommandType.GET_HEIGHT -> "height?"
-            CommandType.GET_TEMPERATURE -> "temp?"
-            CommandType.GET_ACCELERATION -> "acceleration?"
-            CommandType.GET_TOF -> "tof?"
-            CommandType.GET_BAROMETER -> "baro?"
-            CommandType.CONNECT -> "command"
-            CommandType.STOP -> "stop"
-            CommandType.STREAM_ON -> "streamon"
-            CommandType.STREAM_OFF -> "streamoff"
+        val command = commandMap[message] ?: run {
+            logMsg("✗ Unknown command: $message")
+            return@withContext
         }
 
-        if (udpSocket == null) {
-            logMsg("Socket not connected: call connect() first")
+        if (commandSocket == null) {
+            logMsg("✗ Not connected")
             return@withContext
         }
 
         try {
-            val buffer = actualCommand.toByteArray(Charsets.UTF_8)
-            val packet = DatagramPacket(buffer, buffer.size, InetAddress.getByName(DEFAULT_TELLO_IP), DEFAULT_TELLO_PORT)
-            udpSocket?.send(packet)
-            logMsg("→ Sent: $actualCommand")
+            sendRaw(command)
+            logMsg("→ $command")
         } catch (e: Exception) {
-            logMsg("Failed to send '$actualCommand': ${e.message}")
+            logMsg("✗ Send failed: ${e.message}")
         }
     }
 
-    override suspend fun getTelemetryData(oldTelemetryData: TelemetryData): TelemetryData = withContext(Dispatchers.IO) {
-        if (udpSocket == null) {
-            logMsg("getTelemetryData called but socket is not connected")
-            return@withContext TelemetryData()
+    override fun startTelemetryListener(onUpdate: (TelemetryData) -> Unit) {
+        if (isTelemetryListening) {
+            logMsg("Telemetry listener already running")
+            return
         }
 
-        val telemetryCommands = mutableMapOf(
-            "battery?" to "battery",
-            "speed?" to "speed",
-            "time?" to "time",
-            "wifi?" to "wifi",
-            "sdk?" to "sdk",
-            "sn?" to "sn"
-        )
+        isTelemetryListening = true
 
-        if(wifiAlreadyAsked){
-            telemetryCommands.remove("wifi?")
-        }
-        if(sdkAlreadyAsked){
-            telemetryCommands.remove("sdk?")
-        }
-        if(serialAlreadyAsked){
-            telemetryCommands.remove("sn?")
-        }
+        telemetryJob = CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Create telemetry socket on port 8890
+                telemetrySocket = DatagramSocket(TELEMETRY_PORT).apply {
+                    reuseAddress = true
+                    soTimeout = 1000 // 1 second timeout for telemetry
+                }
 
-        try {
-            var finalTelemetryData = oldTelemetryData
+                logMsg("✓ Telemetry listener started on port $TELEMETRY_PORT")
 
-            telemetryCommands.forEach { (cmd, type) ->
-                val buf = cmd.toByteArray(Charsets.UTF_8)
-                val packet = DatagramPacket(buf, buf.size, InetAddress.getByName(DEFAULT_TELLO_IP), DEFAULT_TELLO_PORT)
-                udpSocket?.send(packet)
-                logMsg("Sent telemetry request: $cmd")
+                val buffer = ByteArray(2048)
 
-                var responseReceived = false
+                while (isTelemetryListening) {
+                    try {
+                        val packet = DatagramPacket(buffer, buffer.size)
+                        telemetrySocket?.receive(packet)
 
-                delay(1000)
+                        val data = String(packet.data, 0, packet.length, Charsets.UTF_8).trim()
 
-                val resp = receiveOnce(false)
+                        // Parse the telemetry data
+                        val telemetry = parseTelemetryState(data)
+                        onUpdate(telemetry)
 
-                if (resp != null && resp.isNotEmpty()) {
-                    when (type) {
-                        "battery" -> {
-                            finalTelemetryData = finalTelemetryData.copy(battery = resp.toInt())
-                            responseReceived = true
-                            logMsg("✓ Battery: $resp%")
-                        }
-                        "speed" -> {
-                            finalTelemetryData = finalTelemetryData.copy(speed = resp)
-                            responseReceived = true
-                            logMsg("✓ Speed: $resp cm/s")
-                        }
-                        "time" -> {
-                            finalTelemetryData = finalTelemetryData.copy(flightTime = resp)
-                            responseReceived = true
-                            logMsg("✓ Flight time: $resp seconds")
-                        }
-                        "wifi" -> {
-                            finalTelemetryData = finalTelemetryData.copy(wifi = resp)
-                            responseReceived = true
-                            logMsg("✓ WiFi: $resp")
-                            responseReceived = true
-                            wifiAlreadyAsked = true
-                        }
-                        "sdk" -> {
-                            finalTelemetryData = finalTelemetryData.copy(sdk = resp)
-                            responseReceived = true
-                            logMsg("✓ SDK: $resp")
-                            responseReceived = true
-                            sdkAlreadyAsked = true
-                        }
-                        "sn" -> {
-                            finalTelemetryData = finalTelemetryData.copy(serialNumber = resp)
-                            responseReceived = true
-                            logMsg("✓ Serial: $resp")
-                            responseReceived = true
-                            serialAlreadyAsked = true
+                    } catch (_: SocketTimeoutException) {
+                        // Timeout is normal, continue listening
+                        continue
+                    } catch (e: Exception) {
+                        if (isTelemetryListening) {
+                            logMsg("Telemetry receive error: ${e.message}")
                         }
                     }
                 }
+            } catch (e: Exception) {
+                logMsg("✗ Telemetry listener failed: ${e.message}")
+            } finally {
+                telemetrySocket?.close()
+                telemetrySocket = null
+                logMsg("Telemetry listener stopped")
             }
-
-            finalTelemetryData
-        } catch (e: Exception) {
-            logMsg("getTelemetryData failed: ${e.message}")
-            oldTelemetryData
         }
     }
 
-    override suspend fun close() = withContext(Dispatchers.IO) {
-        udpSocket?.close()
-        udpSocket = null
-        logMsg("Socket closed")
+    override fun stopTelemetryListener() {
+        isTelemetryListening = false
+        telemetryJob?.cancel()
+        telemetryJob = null
+        telemetrySocket?.close()
+        telemetrySocket = null
     }
 
-    private fun receiveOnce(connection: Boolean): String? {
-        if(connection) {
-            try {
-                val receiveBuffer = ByteArray(1518)
-                val receivePacket = DatagramPacket(receiveBuffer, receiveBuffer.size)
-                udpSocket?.receive(receivePacket)
-                val response = String(receivePacket.data, 0, receivePacket.length, Charsets.UTF_8).trim()
-                return response
-            } catch (e: SocketTimeoutException) {
-                return null
-            } catch (e: Exception) {
-                logMsg("receiveOnce error: ${e.message}")
-                return null
-            }
-        } else {
-            try {
-                var response = "ok"
+    override suspend fun close() = withContext(Dispatchers.IO) {
+        stopTelemetryListener()
+        closeCommandSocket()
+        logMsg("✓ Disconnected")
+    }
 
-                while(response.contains("ok") || response.contains("error")) {
-                    val receiveBuffer = ByteArray(1518)
-                    val receivePacket = DatagramPacket(receiveBuffer, receiveBuffer.size)
-                    udpSocket?.receive(receivePacket)
-                    response = String(receivePacket.data, 0, receivePacket.length, Charsets.UTF_8).trim()
+    // Private helpers
+
+    private fun closeCommandSocket() {
+        commandSocket?.close()
+        commandSocket = null
+    }
+
+    private fun sendRaw(command: String) {
+        val buffer = command.toByteArray(Charsets.UTF_8)
+        val packet = DatagramPacket(buffer, buffer.size, telloAddress, DEFAULT_TELLO_PORT)
+        commandSocket?.send(packet)
+    }
+
+    private fun receiveCommandResponse(): String? = try {
+        val buffer = ByteArray(1518)
+        val packet = DatagramPacket(buffer, buffer.size)
+        commandSocket?.receive(packet)
+        String(packet.data, 0, packet.length, Charsets.UTF_8).trim()
+    } catch (_: SocketTimeoutException) {
+        null
+    } catch (e: Exception) {
+        logMsg("Receive error: ${e.message}")
+        null
+    }
+
+    /**
+     * Parse Tello state string into TelemetryData
+     * Format: "pitch:%d;roll:%d;yaw:%d;vgx:%d;vgy:%d;vgz:%d;templ:%d;temph:%d;tof:%d;h:%d;bat:%d;baro:%.2f;time:%d;agx:%.2f;agy:%.2f;agz:%.2f;\r\n"
+     */
+    private fun parseTelemetryState(data: String): TelemetryData {
+        try {
+            val params = data.split(";")
+                .mapNotNull {
+                    val parts = it.split(":")
+                    if (parts.size == 2) parts[0] to parts[1] else null
                 }
+                .toMap()
 
-                return response
-            } catch (e: SocketTimeoutException) {
-                return null
-            } catch (e: Exception) {
-                logMsg("receiveOnce error: ${e.message}")
-                return null
-            }
+            return TelemetryData(
+                pitch = params["pitch"]?.toIntOrNull() ?: 0,
+                roll = params["roll"]?.toIntOrNull() ?: 0,
+                yaw = params["yaw"]?.toIntOrNull() ?: 0,
+                vgx = params["vgx"]?.toIntOrNull() ?: 0,
+                vgy = params["vgy"]?.toIntOrNull() ?: 0,
+                vgz = params["vgz"]?.toIntOrNull() ?: 0,
+                tempLow = params["templ"]?.toIntOrNull() ?: 0,
+                tempHigh = params["temph"]?.toIntOrNull() ?: 0,
+                tof = params["tof"]?.toIntOrNull() ?: 0,
+                height = params["h"]?.toIntOrNull() ?: 0,
+                battery = params["bat"]?.toIntOrNull() ?: 0,
+                baro = params["baro"]?.toFloatOrNull() ?: 0f,
+                flightTime = params["time"]?.toIntOrNull() ?: 0,
+                agx = params["agx"]?.toFloatOrNull() ?: 0f,
+                agy = params["agy"]?.toFloatOrNull() ?: 0f,
+                agz = params["agz"]?.toFloatOrNull() ?: 0f
+            )
+        } catch (e: Exception) {
+            logMsg("Parse error: ${e.message}")
+            return TelemetryData()
         }
     }
 }
