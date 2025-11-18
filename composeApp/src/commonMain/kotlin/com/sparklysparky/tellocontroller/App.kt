@@ -6,8 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,17 +61,17 @@ fun App() {
                     onConnectClick = { viewModel.connect() }
                 )
 
-                // Main Content: Split Screen
+                // Main Content: Split Screen - 2:1 ratio
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Left Side: Telemetry
+                    // Left Side: Telemetry (2/3 of screen)
                     Column(
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(2f)  // Changed from 1f to 2f
                             .fillMaxHeight()
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -82,10 +79,10 @@ fun App() {
                         TelemetryDashboard(telemetry)
                     }
 
-                    // Right Side: Controls
+                    // Right Side: Controls (1/3 of screen)
                     Column(
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1f)  // Stays at 1f
                             .fillMaxHeight()
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -94,7 +91,6 @@ fun App() {
                         MovementControlsSection(viewModel, isConnected)
                         RotationControlsSection(viewModel, isConnected)
                         FlipControlsSection(viewModel, isConnected)
-                        AdvancedCommandsSection(viewModel, isConnected)
                     }
                 }
             }
@@ -187,12 +183,12 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // Battery & Height
+            // Row 1: Battery, Height, TOF (3 columns)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                CompactGauge(
+                CircularGauge(
                     modifier = Modifier.weight(1f),
                     label = "BATTERY",
                     value = telemetry.battery,
@@ -205,7 +201,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                     }
                 )
 
-                CompactGauge(
+                CircularGauge(
                     modifier = Modifier.weight(1f),
                     label = "HEIGHT",
                     value = telemetry.height,
@@ -213,57 +209,223 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                     unit = "cm",
                     color = Color(0xFF00D4FF)
                 )
+
+                CircularGauge(
+                    modifier = Modifier.weight(1f),
+                    label = "TOF",
+                    value = telemetry.tof,
+                    maxValue = 800,
+                    unit = "cm",
+                    color = Color(0xFF9C27B0)
+                )
             }
 
-            // Metrics Grid
-            CompactMetric("TEMP", "${telemetry.tempLow}°-${telemetry.tempHigh}°C", Icons.Default.DeviceThermostat)
-            CompactMetric("TIME", formatTime(telemetry.flightTime), Icons.Default.Timer)
-            CompactMetric("TOF", "${telemetry.tof} cm", Icons.Default.Straighten)
-            CompactMetric("BARO", String.format("%.2f cm", telemetry.baro), Icons.Default.Compress)
-
-            Divider(color = Color.White.copy(alpha = 0.1f))
-
-            // Attitude
+            // Row 2: Temps & Barometer & Flight Time (3 columns)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MiniMetric(Modifier.weight(1f), "PITCH", "${telemetry.pitch}°")
-                MiniMetric(Modifier.weight(1f), "ROLL", "${telemetry.roll}°")
-                MiniMetric(Modifier.weight(1f), "YAW", "${telemetry.yaw}°")
+                CircularGauge(
+                    modifier = Modifier.weight(1f),
+                    label = "TEMP LOW",
+                    value = telemetry.tempLow,
+                    maxValue = 90,
+                    unit = "°C",
+                    color = Color(0xFFFF9800)
+                )
+
+                CircularGauge(
+                    modifier = Modifier.weight(1f),
+                    label = "TEMP HIGH",
+                    value = telemetry.tempHigh,
+                    maxValue = 90,
+                    unit = "°C",
+                    color = Color(0xFFFF5722)
+                )
+
+                CircularGauge(
+                    modifier = Modifier.weight(1f),
+                    label = "BAROMETER",
+                    value = telemetry.baro.toInt(),
+                    maxValue = 500,
+                    unit = "cm",
+                    color = Color(0xFF673AB7)
+                )
             }
 
-            // Velocity
+            // Row 3: Flight Time (centered)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MiniMetric(Modifier.weight(1f), "VX", "${telemetry.vgx}")
-                MiniMetric(Modifier.weight(1f), "VY", "${telemetry.vgy}")
-                MiniMetric(Modifier.weight(1f), "VZ", "${telemetry.vgz}")
+                CircularGauge(
+                    modifier = Modifier.weight(1f),
+                    label = "FLIGHT TIME",
+                    value = telemetry.flightTime,
+                    maxValue = 900,
+                    unit = "sec",
+                    color = Color(0xFF2196F3),
+                    displayValue = formatTime(telemetry.flightTime)
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
             }
 
-            // Acceleration
+            HorizontalDivider(thickness = 2.dp, color = Color.White.copy(alpha = 0.1f))
+
+            // Attitude Section
+            Text(
+                "ATTITUDE",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 11.sp
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MiniMetric(Modifier.weight(1f), "AX", String.format("%.2f", telemetry.agx))
-                MiniMetric(Modifier.weight(1f), "AY", String.format("%.2f", telemetry.agy))
-                MiniMetric(Modifier.weight(1f), "AZ", String.format("%.2f", telemetry.agz))
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "PITCH",
+                    value = telemetry.pitch,
+                    minValue = -180,
+                    maxValue = 180,
+                    unit = "°",
+                    color = Color(0xFF00BCD4)
+                )
+
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "ROLL",
+                    value = telemetry.roll,
+                    minValue = -180,
+                    maxValue = 180,
+                    unit = "°",
+                    color = Color(0xFF00BCD4)
+                )
+
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "YAW",
+                    value = telemetry.yaw,
+                    minValue = -180,
+                    maxValue = 180,
+                    unit = "°",
+                    color = Color(0xFF00BCD4)
+                )
+            }
+
+            HorizontalDivider(thickness = 2.dp, color = Color.White.copy(alpha = 0.1f))
+
+            // Velocity Section
+            Text(
+                "VELOCITY",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 11.sp
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "VX",
+                    value = telemetry.vgx,
+                    minValue = -100,
+                    maxValue = 100,
+                    unit = "cm/s",
+                    color = Color(0xFFE91E63)
+                )
+
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "VY",
+                    value = telemetry.vgy,
+                    minValue = -100,
+                    maxValue = 100,
+                    unit = "cm/s",
+                    color = Color(0xFFE91E63)
+                )
+
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "VZ",
+                    value = telemetry.vgz,
+                    minValue = -100,
+                    maxValue = 100,
+                    unit = "cm/s",
+                    color = Color(0xFFE91E63)
+                )
+            }
+
+            HorizontalDivider(thickness = 2.dp, color = Color.White.copy(alpha = 0.1f))
+
+            // Acceleration Section
+            Text(
+                "ACCELERATION",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 11.sp
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "AX",
+                    value = (telemetry.agx * 100).toInt(),
+                    minValue = -200,
+                    maxValue = 200,
+                    unit = "g",
+                    color = Color(0xFF4CAF50),
+                    displayValue = String.format("%.2f", telemetry.agx)
+                )
+
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "AY",
+                    value = (telemetry.agy * 100).toInt(),
+                    minValue = -200,
+                    maxValue = 200,
+                    unit = "g",
+                    color = Color(0xFF4CAF50),
+                    displayValue = String.format("%.2f", telemetry.agy)
+                )
+
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "AZ",
+                    value = (telemetry.agz * 100).toInt(),
+                    minValue = -200,
+                    maxValue = 200,
+                    unit = "g",
+                    color = Color(0xFF4CAF50),
+                    displayValue = String.format("%.2f", telemetry.agz)
+                )
             }
         }
     }
 }
 
+// Existing CompactGauge renamed to CircularGauge with optional displayValue
 @Composable
-fun CompactGauge(
+fun CircularGauge(
     modifier: Modifier = Modifier,
     label: String,
     value: Int,
     maxValue: Int,
     unit: String,
-    color: Color
+    color: Color,
+    displayValue: String? = null
 ) {
     Card(
         modifier = modifier,
@@ -298,11 +460,11 @@ fun CompactGauge(
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "$value",
+                        displayValue ?: "$value",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = color,
-                        fontSize = 16.sp
+                        fontSize = 14.sp
                     )
                     Text(
                         unit,
@@ -316,70 +478,75 @@ fun CompactGauge(
     }
 }
 
+// New gauge for values that can be negative (centered at 0)
 @Composable
-fun CompactMetric(label: String, value: String, icon: ImageVector) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                label,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp
-            )
-        }
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            fontSize = 13.sp
-        )
-    }
-}
-
-@Composable
-fun MiniMetric(modifier: Modifier, label: String, value: String) {
+fun CircularGaugeWithCenter(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: Int,
+    minValue: Int,
+    maxValue: Int,
+    unit: String,
+    color: Color,
+    displayValue: String? = null
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.background
         ),
-        shape = RoundedCornerShape(6.dp)
+        shape = RoundedCornerShape(8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(6.dp),
+                .padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.6f),
-                fontSize = 9.sp
+                fontSize = 10.sp
             )
-            Text(
-                value,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 11.sp
-            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Box(contentAlignment = Alignment.Center) {
+                // Background track
+                CircularProgressIndicator(
+                    progress = { 1f },
+                    modifier = Modifier.size(60.dp),
+                    color = Color.White.copy(alpha = 0.1f),
+                    strokeWidth = 5.dp
+                )
+
+                // Value indicator (normalized from min/max to 0-1)
+                val normalizedValue = ((value - minValue).toFloat() / (maxValue - minValue)).coerceIn(0f, 1f)
+                CircularProgressIndicator(
+                    progress = { normalizedValue },
+                    modifier = Modifier.size(60.dp),
+                    color = color,
+                    strokeWidth = 5.dp,
+                    trackColor = Color.Transparent
+                )
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        displayValue ?: "$value",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = color,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        unit,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 8.sp
+                    )
+                }
+            }
         }
     }
 }
@@ -486,23 +653,6 @@ fun FlipControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
             }
             CompactButton(Modifier.weight(1f), "R", "➡️", Color(0xFF673AB7), isConnected) {
                 viewModel.sendCommand(CommandType.FLIP_RIGHT)
-            }
-        }
-    }
-}
-
-@Composable
-fun AdvancedCommandsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("ADVANCED") {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            CompactButton(Modifier.weight(1f), "STREAM", "📹", Color(0xFF009688), isConnected) {
-                viewModel.sendCommand(CommandType.STREAM_ON)
-            }
-            CompactButton(Modifier.weight(1f), "SPEED", "⚡", Color(0xFFFFEB3B), isConnected) {
-                viewModel.sendCommand(CommandType.SET_SPEED)
             }
         }
     }
