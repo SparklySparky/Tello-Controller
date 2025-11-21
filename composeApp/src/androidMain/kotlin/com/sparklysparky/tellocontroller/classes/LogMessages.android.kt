@@ -1,5 +1,7 @@
 package com.sparklysparky.tellocontroller.classes
 
+import android.util.Log
+
 actual fun logMsg(message: String) {
-    TODO("Not yet implemented")
+    Log.d("TelloController", message)
 }

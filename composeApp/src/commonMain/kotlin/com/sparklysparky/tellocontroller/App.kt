@@ -136,7 +136,7 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("CONNECT", fontWeight = FontWeight.Bold)
+                    Text("CONNETTITI", fontWeight = FontWeight.Bold)
                 }
             } else {
                 Row(
@@ -150,7 +150,7 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
                             .background(Color(0xFF4CAF50))
                     )
                     Text(
-                        "CONNECTED",
+                        "CONNESSO",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -177,7 +177,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                "TELEMETRY",
+                "TELEMETRIA",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -190,7 +190,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             ) {
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "BATTERY",
+                    label = "BATTERIA",
                     value = telemetry.battery,
                     maxValue = 100,
                     unit = "%",
@@ -203,7 +203,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "HEIGHT",
+                    label = "ALTEZZA",
                     value = telemetry.height,
                     maxValue = 500,
                     unit = "cm",
@@ -212,7 +212,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "TOF",
+                    label = "DISTANZA TOF",
                     value = telemetry.tof,
                     maxValue = 800,
                     unit = "cm",
@@ -227,25 +227,25 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             ) {
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "TEMP LOW",
+                    label = "TEMP BASSA",
                     value = telemetry.tempLow,
-                    maxValue = 90,
+                    maxValue = 150,
                     unit = "°C",
                     color = Color(0xFFFF9800)
                 )
 
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "TEMP HIGH",
+                    label = "TEMP ALTA",
                     value = telemetry.tempHigh,
-                    maxValue = 90,
+                    maxValue = 150,
                     unit = "°C",
                     color = Color(0xFFFF5722)
                 )
 
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "BAROMETER",
+                    label = "BAROMETRO",
                     value = telemetry.baro.toInt(),
                     maxValue = 500,
                     unit = "cm",
@@ -260,7 +260,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             ) {
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "FLIGHT TIME",
+                    label = "TEMPO DI VOLO",
                     value = telemetry.flightTime,
                     maxValue = 900,
                     unit = "sec",
@@ -276,7 +276,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
             // Attitude Section
             Text(
-                "ATTITUDE",
+                "ALTITUDINE",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -289,17 +289,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             ) {
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "PITCH",
-                    value = telemetry.pitch,
-                    minValue = -180,
-                    maxValue = 180,
-                    unit = "°",
-                    color = Color(0xFF00BCD4)
-                )
-
-                CircularGaugeWithCenter(
-                    modifier = Modifier.weight(1f),
-                    label = "ROLL",
+                    label = "ROTAZIONE X",
                     value = telemetry.roll,
                     minValue = -180,
                     maxValue = 180,
@@ -309,7 +299,17 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "YAW",
+                    label = "ROTAZIONE Y",
+                    value = telemetry.pitch,
+                    minValue = -180,
+                    maxValue = 180,
+                    unit = "°",
+                    color = Color(0xFF00BCD4)
+                )
+
+                CircularGaugeWithCenter(
+                    modifier = Modifier.weight(1f),
+                    label = "ROTAZIONE Z",
                     value = telemetry.yaw,
                     minValue = -180,
                     maxValue = 180,
@@ -322,7 +322,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
             // Velocity Section
             Text(
-                "VELOCITY",
+                "VELOCITÀ",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -335,7 +335,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             ) {
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "VX",
+                    label = "Vx",
                     value = telemetry.vgx,
                     minValue = -100,
                     maxValue = 100,
@@ -345,7 +345,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "VY",
+                    label = "Vy",
                     value = telemetry.vgy,
                     minValue = -100,
                     maxValue = 100,
@@ -355,7 +355,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "VZ",
+                    label = "Vz",
                     value = telemetry.vgz,
                     minValue = -100,
                     maxValue = 100,
@@ -368,7 +368,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
             // Acceleration Section
             Text(
-                "ACCELERATION",
+                "ACCELLERAZIONE",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -381,10 +381,10 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             ) {
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "AX",
-                    value = (telemetry.agx * 100).toInt(),
-                    minValue = -200,
-                    maxValue = 200,
+                    label = "Ax",
+                    value = (telemetry.agx).toInt(),
+                    minValue = -2000,
+                    maxValue = 2000,
                     unit = "g",
                     color = Color(0xFF4CAF50),
                     displayValue = String.format("%.2f", telemetry.agx)
@@ -392,10 +392,10 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "AY",
-                    value = (telemetry.agy * 100).toInt(),
-                    minValue = -200,
-                    maxValue = 200,
+                    label = "Ay",
+                    value = (telemetry.agy).toInt(),
+                    minValue = -2000,
+                    maxValue = 2000,
                     unit = "g",
                     color = Color(0xFF4CAF50),
                     displayValue = String.format("%.2f", telemetry.agy)
@@ -403,13 +403,13 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "AZ",
-                    value = (telemetry.agz * 100).toInt(),
-                    minValue = -200,
-                    maxValue = 200,
+                    label = "Az",
+                    value = telemetry.agz.toInt(),
+                    minValue = -2000,
+                    maxValue = 2000,
                     unit = "g",
                     color = Color(0xFF4CAF50),
-                    displayValue = String.format("%.2f", telemetry.agz)
+                    displayValue = String.format("%.2f", telemetry.agz + 1000)
                 )
             }
         }
@@ -553,15 +553,15 @@ fun CircularGaugeWithCenter(
 
 @Composable
 fun FlightControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("FLIGHT") {
+    CompactCommandSection("VOLO") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "TAKEOFF", "🚁", Color(0xFF4CAF50), isConnected) {
+            CompactButton(Modifier.weight(1f), "DECOLLO", "🚁", Color(0xFF4CAF50), isConnected) {
                 viewModel.sendCommand(CommandType.TAKEOFF)
             }
-            CompactButton(Modifier.weight(1f), "LAND", "🛬", Color(0xFF2196F3), isConnected) {
+            CompactButton(Modifier.weight(1f), "ATTERRAGGIO", "🛬", Color(0xFF2196F3), isConnected) {
                 viewModel.sendCommand(CommandType.LAND)
             }
         }
@@ -581,15 +581,15 @@ fun FlightControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
 
 @Composable
 fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("MOVEMENT") {
+    CompactCommandSection("MOVIMENTO") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "UP", "⬆️", Color(0xFF00BCD4), isConnected) {
+            CompactButton(Modifier.weight(1f), "SU", "⬆️", Color(0xFF00BCD4), isConnected) {
                 viewModel.sendCommand(CommandType.UP)
             }
-            CompactButton(Modifier.weight(1f), "DOWN", "⬇️", Color(0xFF00BCD4), isConnected) {
+            CompactButton(Modifier.weight(1f), "GIÙ", "⬇️", Color(0xFF00BCD4), isConnected) {
                 viewModel.sendCommand(CommandType.DOWN)
             }
         }
@@ -597,10 +597,10 @@ fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "LEFT", "⬅️", Color(0xFF9C27B0), isConnected) {
+            CompactButton(Modifier.weight(1f), "SINISTRA", "⬅️", Color(0xFF9C27B0), isConnected) {
                 viewModel.sendCommand(CommandType.LEFT)
             }
-            CompactButton(Modifier.weight(1f), "RIGHT", "➡️", Color(0xFF9C27B0), isConnected) {
+            CompactButton(Modifier.weight(1f), "DESTRA", "➡️", Color(0xFF9C27B0), isConnected) {
                 viewModel.sendCommand(CommandType.RIGHT)
             }
         }
@@ -608,10 +608,10 @@ fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "FWD", "🔼", Color(0xFFFF9800), isConnected) {
+            CompactButton(Modifier.weight(1f), "AVANTI", "🔼", Color(0xFFFF9800), isConnected) {
                 viewModel.sendCommand(CommandType.FORWARD)
             }
-            CompactButton(Modifier.weight(1f), "BACK", "🔽", Color(0xFFFF9800), isConnected) {
+            CompactButton(Modifier.weight(1f), "INDIETRO", "🔽", Color(0xFFFF9800), isConnected) {
                 viewModel.sendCommand(CommandType.BACKWARD)
             }
         }
@@ -620,15 +620,15 @@ fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
 
 @Composable
 fun RotationControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("ROTATION") {
+    CompactCommandSection("ROTAZIONE") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "CW", "↻", Color(0xFFE91E63), isConnected) {
+            CompactButton(Modifier.weight(1f), "ORARIA", "↻", Color(0xFFE91E63), isConnected) {
                 viewModel.sendCommand(CommandType.ROTATE_CLOCKWISE)
             }
-            CompactButton(Modifier.weight(1f), "CCW", "↺", Color(0xFFE91E63), isConnected) {
+            CompactButton(Modifier.weight(1f), "ANTIORARIA", "↺", Color(0xFFE91E63), isConnected) {
                 viewModel.sendCommand(CommandType.ROTATE_COUNTERCLOCKWISE)
             }
         }
@@ -637,21 +637,21 @@ fun RotationControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
 
 @Composable
 fun FlipControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("FLIPS") {
+    CompactCommandSection("CAPRIOLA") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "F", "🔼", Color(0xFF673AB7), isConnected) {
+            CompactButton(Modifier.weight(1f), "AV", "🔼", Color(0xFF673AB7), isConnected) {
                 viewModel.sendCommand(CommandType.FLIP_FORWARD)
             }
-            CompactButton(Modifier.weight(1f), "B", "🔽", Color(0xFF673AB7), isConnected) {
+            CompactButton(Modifier.weight(1f), "IN", "🔽", Color(0xFF673AB7), isConnected) {
                 viewModel.sendCommand(CommandType.FLIP_BACKWARD)
             }
-            CompactButton(Modifier.weight(1f), "L", "⬅️", Color(0xFF673AB7), isConnected) {
+            CompactButton(Modifier.weight(1f), "SX", "⬅️", Color(0xFF673AB7), isConnected) {
                 viewModel.sendCommand(CommandType.FLIP_LEFT)
             }
-            CompactButton(Modifier.weight(1f), "R", "➡️", Color(0xFF673AB7), isConnected) {
+            CompactButton(Modifier.weight(1f), "DX", "➡️", Color(0xFF673AB7), isConnected) {
                 viewModel.sendCommand(CommandType.FLIP_RIGHT)
             }
         }
