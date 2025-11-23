@@ -1,11 +1,14 @@
 package com.sparklysparky.tellocontroller
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,17 +65,17 @@ fun App() {
                     onConnectClick = { viewModel.connect() }
                 )
 
-                // Main Content: Split Screen - 2:1 ratio
+                // Main Content: 3 Column Layout
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Left Side: Telemetry (2/3 of screen)
+                    // LEFT COLUMN: Telemetry
                     Column(
                         modifier = Modifier
-                            .weight(2f)  // Changed from 1f to 2f
+                            .weight(1f)
                             .fillMaxHeight()
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -79,10 +83,20 @@ fun App() {
                         TelemetryDashboard(telemetry)
                     }
 
-                    // Right Side: Controls (1/3 of screen)
+                    // MIDDLE COLUMN: Video (Scalable)
                     Column(
                         modifier = Modifier
-                            .weight(1f)  // Stays at 1f
+                            .weight(1.5f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        VideoStreamDisplay(viewModel, isConnected)
+                    }
+
+                    // RIGHT COLUMN: Controls
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
                             .fillMaxHeight()
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -105,7 +119,8 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = if (isConnected) Color(0xFF1B5E20) else Color(0xFF8B0000)
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             modifier = Modifier
@@ -116,13 +131,14 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
         ) {
             Column {
                 Text(
-                    "TELLO DRONE",
+                    "🚁 TELLO DRONE CONTROLLER",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    fontSize = 20.sp
                 )
                 Text(
-                    "Controller v1.0",
+                    "v1.0",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.7f)
                 )
@@ -162,13 +178,147 @@ fun ConnectionHeader(isConnected: Boolean, onConnectClick: () -> Unit) {
 }
 
 @Composable
+fun VideoStreamDisplay(viewModel: MainViewModel, isConnected: Boolean) {
+    val isVideoStreaming by viewModel.isVideoStreaming.collectAsState()
+    val currentFrame by viewModel.currentFrame.collectAsState()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "📹 VIDEO LIVE",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 18.sp
+                )
+
+                Button(
+                    onClick = { viewModel.toggleVideoStream() },
+                    enabled = isConnected,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isVideoStreaming) Color(0xFFEF5350) else Color(0xFF009688)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        if (isVideoStreaming) "⏹ FERMA" else "▶ AVVIA",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            // Video Display
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(4f / 3f),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Black
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (currentFrame != null) {
+                        Image(
+                            bitmap = currentFrame!!,
+                            contentDescription = "Tello Live Feed",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        // LIVE indicator overlay
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .background(
+                                        Color.Red.copy(alpha = 0.8f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                )
+                                Text(
+                                    "LIVE",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Videocam,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.3f),
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Text(
+                                if (isVideoStreaming) "Decodifica..." else "Stream non attivo",
+                                color = Color.White.copy(alpha = 0.6f),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            if (!isConnected) {
+                                Text(
+                                    "Connettiti al drone",
+                                    color = Color.White.copy(alpha = 0.4f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun TelemetryDashboard(telemetry: TelemetryData) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
@@ -177,13 +327,13 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                "TELEMETRIA",
+                "📊 TELEMETRIA",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // Row 1: Battery, Height, TOF (3 columns)
+            // Row 1: Battery, Height, TOF
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -212,7 +362,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "DISTANZA TOF",
+                    label = "TOF",
                     value = telemetry.tof,
                     maxValue = 800,
                     unit = "cm",
@@ -220,14 +370,14 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                 )
             }
 
-            // Row 2: Temps & Barometer & Flight Time (3 columns)
+            // Row 2: Temps & Flight Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "TEMP BASSA",
+                    label = "TEMP MIN",
                     value = telemetry.tempLow,
                     maxValue = 150,
                     unit = "°C",
@@ -236,7 +386,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "TEMP ALTA",
+                    label = "TEMP MAX",
                     value = telemetry.tempHigh,
                     maxValue = 150,
                     unit = "°C",
@@ -245,42 +395,24 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGauge(
                     modifier = Modifier.weight(1f),
-                    label = "BAROMETRO",
-                    value = telemetry.baro.toInt(),
-                    maxValue = 500,
-                    unit = "cm",
-                    color = Color(0xFF673AB7)
-                )
-            }
-
-            // Row 3: Flight Time (centered)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CircularGauge(
-                    modifier = Modifier.weight(1f),
-                    label = "TEMPO DI VOLO",
+                    label = "VOLO",
                     value = telemetry.flightTime,
                     maxValue = 900,
-                    unit = "sec",
+                    unit = "",
                     color = Color(0xFF2196F3),
                     displayValue = formatTime(telemetry.flightTime)
                 )
-
-                Spacer(modifier = Modifier.weight(1f))
-                Spacer(modifier = Modifier.weight(1f))
             }
 
-            HorizontalDivider(thickness = 2.dp, color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = 0.1f))
 
-            // Attitude Section
+            // Attitude
             Text(
-                "ALTITUDINE",
+                "Orientamento",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                fontSize = 11.sp
+                fontSize = 12.sp
             )
 
             Row(
@@ -289,7 +421,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
             ) {
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "ROTAZIONE X",
+                    label = "Rotazione X",
                     value = telemetry.roll,
                     minValue = -180,
                     maxValue = 180,
@@ -299,7 +431,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "ROTAZIONE Y",
+                    label = "Rotazione Y",
                     value = telemetry.pitch,
                     minValue = -180,
                     maxValue = 180,
@@ -309,7 +441,7 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
 
                 CircularGaugeWithCenter(
                     modifier = Modifier.weight(1f),
-                    label = "ROTAZIONE Z",
+                    label = "Rotazione Z",
                     value = telemetry.yaw,
                     minValue = -180,
                     maxValue = 180,
@@ -318,15 +450,15 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                 )
             }
 
-            HorizontalDivider(thickness = 2.dp, color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = 0.1f))
 
-            // Velocity Section
+            // Velocity
             Text(
-                "VELOCITÀ",
+                "Velocità",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                fontSize = 11.sp
+                fontSize = 12.sp
             )
 
             Row(
@@ -364,11 +496,10 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                 )
             }
 
-            HorizontalDivider(thickness = 2.dp, color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = 0.1f))
 
-            // Acceleration Section
             Text(
-                "ACCELLERAZIONE",
+                "Accellerazione",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -409,14 +540,13 @@ fun TelemetryDashboard(telemetry: TelemetryData) {
                     maxValue = 2000,
                     unit = "g",
                     color = Color(0xFF4CAF50),
-                    displayValue = String.format("%.2f", telemetry.agz + 1000)
+                    displayValue = if(telemetry.agz == 0f) { String.format("%.2f", telemetry.agz) } else { String.format("%.2f", telemetry.agz + 1000) }
                 )
             }
         }
     }
 }
 
-// Existing CompactGauge renamed to CircularGauge with optional displayValue
 @Composable
 fun CircularGauge(
     modifier: Modifier = Modifier,
@@ -478,7 +608,6 @@ fun CircularGauge(
     }
 }
 
-// New gauge for values that can be negative (centered at 0)
 @Composable
 fun CircularGaugeWithCenter(
     modifier: Modifier = Modifier,
@@ -513,7 +642,6 @@ fun CircularGaugeWithCenter(
             Spacer(modifier = Modifier.height(4.dp))
 
             Box(contentAlignment = Alignment.Center) {
-                // Background track
                 CircularProgressIndicator(
                     progress = { 1f },
                     modifier = Modifier.size(60.dp),
@@ -521,7 +649,6 @@ fun CircularGaugeWithCenter(
                     strokeWidth = 5.dp
                 )
 
-                // Value indicator (normalized from min/max to 0-1)
                 val normalizedValue = ((value - minValue).toFloat() / (maxValue - minValue)).coerceIn(0f, 1f)
                 CircularProgressIndicator(
                     progress = { normalizedValue },
@@ -552,17 +679,63 @@ fun CircularGaugeWithCenter(
 }
 
 @Composable
+fun IncrementSelector(
+    label: String,
+    currentValue: Int,
+    options: List<Int>,
+    unit: String,
+    onValueChange: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 10.sp
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            options.forEach { value ->
+                val isSelected = value == currentValue
+                Button(
+                    onClick = { onValueChange(value) },
+                    modifier = Modifier.weight(1f).height(32.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f)
+                    ),
+                    shape = RoundedCornerShape(6.dp),
+                    contentPadding = PaddingValues(2.dp)
+                ) {
+                    Text(
+                        "$value$unit",
+                        fontSize = 10.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) Color.Black else Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun FlightControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("VOLO") {
+    CompactCommandSection("🚁 VOLO") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CompactButton(Modifier.weight(1f), "DECOLLO", "🚁", Color(0xFF4CAF50), isConnected) {
-                viewModel.sendCommand(CommandType.TAKEOFF)
+                viewModel.sendCommand(CommandType.TAKEOFF, "")
             }
-            CompactButton(Modifier.weight(1f), "ATTERRAGGIO", "🛬", Color(0xFF2196F3), isConnected) {
-                viewModel.sendCommand(CommandType.LAND)
+            CompactButton(Modifier.weight(1f), "ATTERRA", "🛬", Color(0xFF2196F3), isConnected) {
+                viewModel.sendCommand(CommandType.LAND, "")
             }
         }
         Row(
@@ -570,10 +743,10 @@ fun FlightControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CompactButton(Modifier.weight(1f), "STOP", "⏸", Color(0xFFFFA726), isConnected) {
-                viewModel.sendCommand(CommandType.STOP)
+                viewModel.sendCommand(CommandType.STOP, "")
             }
             CompactButton(Modifier.weight(1f), "EMRG", "⚠️", Color(0xFFEF5350), isConnected) {
-                viewModel.sendCommand(CommandType.EMERGENCY)
+                viewModel.sendCommand(CommandType.EMERGENCY, "")
             }
         }
     }
@@ -581,27 +754,39 @@ fun FlightControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
 
 @Composable
 fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("MOVIMENTO") {
+    val movementIncrement by viewModel.movementIncrement.collectAsState()
+
+    CompactCommandSection("🎮 MOVIMENTO") {
+        IncrementSelector(
+            label = "Distanza:",
+            currentValue = movementIncrement,
+            options = listOf(20, 50, 100, 250, 500),
+            unit = "cm",
+            onValueChange = { viewModel.setMovementIncrement(it) }
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CompactButton(Modifier.weight(1f), "SU", "⬆️", Color(0xFF00BCD4), isConnected) {
-                viewModel.sendCommand(CommandType.UP)
+                viewModel.sendCommand(CommandType.UP, movementIncrement.toString())
             }
             CompactButton(Modifier.weight(1f), "GIÙ", "⬇️", Color(0xFF00BCD4), isConnected) {
-                viewModel.sendCommand(CommandType.DOWN)
+                viewModel.sendCommand(CommandType.DOWN, movementIncrement.toString())
             }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "SINISTRA", "⬅️", Color(0xFF9C27B0), isConnected) {
-                viewModel.sendCommand(CommandType.LEFT)
+            CompactButton(Modifier.weight(1f), "SX", "⬅️", Color(0xFF9C27B0), isConnected) {
+                viewModel.sendCommand(CommandType.LEFT, movementIncrement.toString())
             }
-            CompactButton(Modifier.weight(1f), "DESTRA", "➡️", Color(0xFF9C27B0), isConnected) {
-                viewModel.sendCommand(CommandType.RIGHT)
+            CompactButton(Modifier.weight(1f), "DX", "➡️", Color(0xFF9C27B0), isConnected) {
+                viewModel.sendCommand(CommandType.RIGHT, movementIncrement.toString())
             }
         }
         Row(
@@ -609,10 +794,10 @@ fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CompactButton(Modifier.weight(1f), "AVANTI", "🔼", Color(0xFFFF9800), isConnected) {
-                viewModel.sendCommand(CommandType.FORWARD)
+                viewModel.sendCommand(CommandType.FORWARD, movementIncrement.toString())
             }
             CompactButton(Modifier.weight(1f), "INDIETRO", "🔽", Color(0xFFFF9800), isConnected) {
-                viewModel.sendCommand(CommandType.BACKWARD)
+                viewModel.sendCommand(CommandType.BACKWARD, movementIncrement.toString())
             }
         }
     }
@@ -620,16 +805,29 @@ fun MovementControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
 
 @Composable
 fun RotationControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("ROTAZIONE") {
+    val rotationIncrement by viewModel.rotationIncrement.collectAsState()
+
+    CompactCommandSection("🔄 ROTAZIONE") {
+        IncrementSelector(
+            label = "Angolo:",
+            currentValue = rotationIncrement,
+            options = listOf(15, 45, 90, 180, 360),
+            unit = "°",
+            onValueChange = { viewModel.setRotationIncrement(it) }
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            CompactButton(Modifier.weight(1f), "ORARIA", "↻", Color(0xFFE91E63), isConnected) {
-                viewModel.sendCommand(CommandType.ROTATE_CLOCKWISE)
+            CompactButton(Modifier.weight(1f), "SINISTRA", "⬅️", Color(0xFFE91E63), isConnected) {
+                viewModel.sendCommand(CommandType.ROTATE_COUNTERCLOCKWISE, rotationIncrement.toString())
             }
-            CompactButton(Modifier.weight(1f), "ANTIORARIA", "↺", Color(0xFFE91E63), isConnected) {
-                viewModel.sendCommand(CommandType.ROTATE_COUNTERCLOCKWISE)
+
+            CompactButton(Modifier.weight(1f), "DESTRA", "➡️", Color(0xFFE91E63), isConnected) {
+                viewModel.sendCommand(CommandType.ROTATE_CLOCKWISE, rotationIncrement.toString())
             }
         }
     }
@@ -637,22 +835,22 @@ fun RotationControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
 
 @Composable
 fun FlipControlsSection(viewModel: MainViewModel, isConnected: Boolean) {
-    CompactCommandSection("CAPRIOLA") {
+    CompactCommandSection("🤸 CAPRIOLA") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CompactButton(Modifier.weight(1f), "AV", "🔼", Color(0xFF673AB7), isConnected) {
-                viewModel.sendCommand(CommandType.FLIP_FORWARD)
+                viewModel.sendCommand(CommandType.FLIP_FORWARD, "")
             }
             CompactButton(Modifier.weight(1f), "IN", "🔽", Color(0xFF673AB7), isConnected) {
-                viewModel.sendCommand(CommandType.FLIP_BACKWARD)
+                viewModel.sendCommand(CommandType.FLIP_BACKWARD, "")
             }
             CompactButton(Modifier.weight(1f), "SX", "⬅️", Color(0xFF673AB7), isConnected) {
-                viewModel.sendCommand(CommandType.FLIP_LEFT)
+                viewModel.sendCommand(CommandType.FLIP_LEFT, "")
             }
             CompactButton(Modifier.weight(1f), "DX", "➡️", Color(0xFF673AB7), isConnected) {
-                viewModel.sendCommand(CommandType.FLIP_RIGHT)
+                viewModel.sendCommand(CommandType.FLIP_RIGHT, "")
             }
         }
     }
@@ -665,7 +863,8 @@ fun CompactCommandSection(title: String, content: @Composable ColumnScope.() -> 
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
@@ -678,7 +877,7 @@ fun CompactCommandSection(title: String, content: @Composable ColumnScope.() -> 
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                fontSize = 12.sp
+                fontSize = 13.sp
             )
             content()
         }
@@ -719,29 +918,27 @@ fun CompactButton(
     }
 }
 
-// Helper function
 fun formatTime(seconds: Int): String {
     val mins = seconds / 60
     val secs = seconds % 60
     return String.format("%02d:%02d", mins, secs)
 }
 
-// Telemetry data class
 data class TelemetryData(
     val pitch: Int = 0,
     val roll: Int = 0,
     val yaw: Int = 0,
-    val vgx: Int = 0,           // velocity X
-    val vgy: Int = 0,           // velocity Y
-    val vgz: Int = 0,           // velocity Z
-    val tempLow: Int = 0,       // lowest temp
-    val tempHigh: Int = 0,      // highest temp
-    val tof: Int = 0,           // time of flight distance
-    val height: Int = 0,        // h
-    val battery: Int = 0,       // bat
-    val baro: Float = 0f,       // barometer
-    val flightTime: Int = 0,    // motor time in seconds
-    val agx: Float = 0f,        // acceleration X
-    val agy: Float = 0f,        // acceleration Y
-    val agz: Float = 0f         // acceleration Z
+    val vgx: Int = 0,
+    val vgy: Int = 0,
+    val vgz: Int = 0,
+    val tempLow: Int = 0,
+    val tempHigh: Int = 0,
+    val tof: Int = 0,
+    val height: Int = 0,
+    val battery: Int = 0,
+    val baro: Float = 0f,
+    val flightTime: Int = 0,
+    val agx: Float = 0f,
+    val agy: Float = 0f,
+    val agz: Float = 0f
 )
